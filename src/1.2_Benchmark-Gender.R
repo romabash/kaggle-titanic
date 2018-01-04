@@ -15,4 +15,4 @@ benchmark_df <- titanic %>%
 
 benchmark_df
 
-write_csv(benchmark_df, "Data/Benchmark-Gender.csv")
+write_csv(benchmark_df, "Data/output/Benchmark-Gender.csv")
