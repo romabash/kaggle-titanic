@@ -294,3 +294,56 @@ result_titanic_test_final <- result_titanic_test_final %>%
 ## Write to csv to Submit on Kaggle
 
 write_csv(result_titanic_test_final, "../Data/output/2.2_Descriptive-based-model-age-tuned-2.csv")
+
+
+############################## Tune the Model for Pclass 3 Females #################################
+
+
+## Tune the model for better Accuracy
+# - Include Single Men (FamilySize 1) between Age 25 and 38 in Pclass 1 
+# - Include Females in Pclass 3 of all Age.  Only exclude based on Family Size
+# - 81.65% Accuracy on Training Set
+# - 87.57% Accuracy on Validation Set 
+# - 82.83% Accuracy on the Whole Titanic Set 
+
+predict_model <- function(df) {
+  df <- df %>%
+    select(PassengerId, Pclass, Sex, Age, FamilySize, Survived) %>%
+    mutate(Prediction = ifelse(Sex == "female" & (Pclass == 1 | Pclass == 2), 1,
+                        ifelse(Sex == "female" & (Pclass == 3 & FamilySize < 5), 1,
+                        ifelse(Sex == "male" & (Pclass == 1 & (Age < 15)), 1,
+                        ifelse(Sex == "male" & (Pclass == 1 & (Age > 25 & Age < 38 & FamilySize == 1)), 1,
+                        ifelse(Sex == "male" & (Pclass == 2 & (Age < 15)), 1,
+                        ifelse(Sex == "male" & (Pclass == 3 & (Age < 15 & FamilySize < 5)), 1, 0
+                        ))))))
+    )
+  return(df)
+}
+
+# Assign the result of a function to result 
+result <- predict_model(titanic_train)
+confusionMatrix(data = result$Prediction, reference = result$Survived) 
+
+## Apply to the Validation set
+
+result_test <- predict_model(titanic_test)
+confusionMatrix(data = result_test$Prediction, reference = result_test$Survived)  
+
+## Apply to the whole Titanic set
+
+result_titanic <- predict_model(titanic)
+confusionMatrix(data = result_titanic$Prediction, reference = result_titanic$Survived) 
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+result_titanic_test_final <- predict_model(titanic_test_final)
+
+result_titanic_test_final <- result_titanic_test_final %>%
+  select(PassengerId, Prediction) %>%
+  rename(Survived = Prediction)
+
+## Write to csv to Submit on Kaggle
+write_csv(result_titanic_test_final, "../Data/output/2.2_Descriptive-based-model-age-tuned--3.csv")
