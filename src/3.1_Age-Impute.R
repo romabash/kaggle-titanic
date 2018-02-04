@@ -112,8 +112,7 @@ titanic_combine <- titanic_combine %>%
          Survived = factor(Survived), 
          Sex = factor(Sex), 
          Embarked = factor(Embarked),
-         Title = factor(Title),
-         FamilySize = factor(FamilySize)) 
+         Title = factor(Title)) 
 
 str(titanic_combine)
 
@@ -191,8 +190,93 @@ View(titanic_test_final)
 ##############################
 
 
+## Partinion the Train dataset into Train and Validation data
+# - Partition using the "caret" package
+# - Create Training set indecies with 80% of data
+
+set.seed(333)
+
+inTrain <- createDataPartition(y = titanic$Survived, p = 0.80, list = FALSE)
+head(inTrain)
+
+# Sub-set titanic data to Train and to Test
+titanic_train <- titanic[inTrain, ]
+titanic_test <- titanic[-inTrain, ]
+
+# 714 rows for Training Data and 177 rows for Test Data
+dim(titanic_train)
+dim(titanic_test)
+
+head(titanic_train)
+
+## Looking At Survival by Gender, Pclass, Age and FamilySize
+
+titanic_train %>%
+  ggplot() +
+  geom_point(aes(x = Age, y = FamilySize, color = Survived), alpha = 0.7) +
+  facet_grid(Sex ~ Pclass) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size=18, colour = "#054354")) +
+  ggtitle("Titanic Survival Rate") +
+  scale_x_continuous(name= "Passenger Age", breaks = 10*c(0:8)) +
+  scale_y_discrete(name = "Family Size") +
+  scale_color_discrete(name = "Outcome", labels = c("Did NOT Survived", "Survived"))  
 
 
+############################## 
+# Build a Model
+##############################
+
+
+## Model to Predict Survival based on Gender, Pclass, Age and FamilySize
+# - Females in Pclass 1 and 2 Survived (97% and 92%)
+# - Females on Pclass 3 Survived if Family Size below 5
+# - Males in Pclass 1 and 2 Survived if: Age is below 15
+# - Males in Pclass 3 Survived if: Age is below 15 and Family Size is 4 and Below
+# - 78.01% Accuracy on Training Set
+# - 85.31% Accuracy on Validation Set (Might be too high)
+# - 79.946% Accuracy on the Whole Titanic Set (Better than based only on Gender)
+
+predict_model <- function(df) {
+  df <- df %>%
+    select(PassengerId, Pclass, Sex, Age, FamilySize, Survived) %>%
+    mutate(Prediction = ifelse(Sex == "female" & (Pclass == 1 | Pclass == 2), 1,
+                        ifelse(Sex == "female" & (Pclass == 3 & FamilySize < 5), 1,
+                        ifelse(Sex == "male" & (Pclass == 1 | Pclass == 2 & (Age < 15)), 1,
+                        ifelse(Sex == "male" & (Pclass == 3 & (Age < 15 & FamilySize < 5)), 1, 0))))
+    )
+  return(df)
+}
+
+
+# Assign the result of a function to result 
+result <- predict_model(titanic_train)
+confusionMatrix(data = result$Prediction, reference = result$Survived) 
+
+## Apply to the Validation set
+
+result_test <- predict_model(titanic_test)
+confusionMatrix(data = result_test$Prediction, reference = result_test$Survived)  
+
+## Apply to the whole Titanic set
+
+result_titanic <- predict_model(titanic)
+confusionMatrix(data = result_titanic$Prediction, reference = result_titanic$Survived) 
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+result_final <- predict_model(titanic_test_final)
+
+result_final <- result_final %>%
+  select(PassengerId, Prediction) %>%
+  rename(Survived = Prediction)
+
+## Write to csv to Submit on Kaggle
+
+write_csv(result_final, "../Data/output/3.1_Imputed-Age.csv")
 
 
 
