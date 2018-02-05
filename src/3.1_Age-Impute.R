@@ -176,7 +176,7 @@ View(titanic)
 test_dummy <- predict(dummy_vars, titanic_test_final[, c(-1, -2)])
 View(test_dummy) # Transformed into Dummy still with Missing Data
 
-# Now impute on Training Set
+# Now impute on Test Set
 pre_process <- preProcess(test_dummy, method = "bagImpute")
 imputed_data <- predict(pre_process, test_dummy)
 View(imputed_data) # Returns a Matrix
@@ -277,6 +277,4 @@ result_final <- result_final %>%
 ## Write to csv to Submit on Kaggle
 
 write_csv(result_final, "../Data/output/3.1_Imputed-Age.csv")
-
-
 
