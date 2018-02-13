@@ -255,8 +255,11 @@ confusionMatrix(data = pred, reference = titanic_test$Survived)
 ###########################
 
 ## Select the Training Variables
-# - Using all Variables except for Passenger ID and Embarked
+# - Looking at Variable with no Variability
+# - All FALSE: No Zero Covariates
+nearZeroVar(titanic_train, saveMetrics = TRUE)
 
+# - Using all Variables except for Passenger ID and Embarked
 training <- titanic_train %>%
   select(Survived, Pclass, Sex, Age, Title, FamilySize, Fare)
 
