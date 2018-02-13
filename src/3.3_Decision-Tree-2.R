@@ -1,4 +1,4 @@
-## Imputing Missing Age with Caret package
+## Imputing Missing Age with Caret package using knnImpute
 ## Build a Desicion Tree Model using "rpart"
 
 # Load packages
@@ -105,13 +105,14 @@ titanic_combine <- titanic_combine %>%
 ## Select only the Variables needed (keeping PassengerId for Test set later)
 
 titanic_combine <- titanic_combine %>%
-  select(PassengerId, Survived, Pclass, Sex, Age, Title, FamilySize)
+  select(PassengerId, Survived, Pclass, Sex, Age, Fare, Embarked, Title, FamilySize)
 
-## Convert "Pclass", "Survived", "Sex", Title", and "FamilySize" Variables to Factors
+## Convert "Pclass", "Survived", "Sex", "Embarked", "Title", and "FamilySize" Variables to Factors
 titanic_combine <- titanic_combine %>%
   mutate(Pclass = factor(Pclass), 
          Survived = factor(Survived), 
          Sex = factor(Sex), 
+         Embarked = factor(Embarked),
          Title = factor(Title),
          FamilySize = factor(FamilySize)) 
 
@@ -127,6 +128,15 @@ str(titanic_combine)
 titanic_combine %>% 
   select_if(function(x) any(is.na(x))) %>% 
   summarise_all(funs(sum(is.na(.)))) 
+
+# Replace NA in Embarked with "S" 
+titanic_combine <- titanic_combine %>%
+  mutate(Embarked = replace(Embarked, is.na(Embarked), "S"))
+
+# Replace NA in Fair with Mean 
+fare_mean <- mean(titanic_combine$Fare, na.rm = TRUE) # 33.29
+titanic_combine <- titanic_combine %>%
+  mutate(Fare = replace(Fare, is.na(Fare), fare_mean))
 
 
 ############################## 
@@ -146,34 +156,37 @@ titanic <- titanic_combine %>%
   filter(!is.na(Survived))
 dim(titanic)
 
+
 ## Impute Missing Age with caret 
-# - First, transform all feature to dummy variables (exclude PassenderId and Survived)
+# - First, Create a Dummy Model to transform all feature to dummy variables (exclude PassenderId and Survived)
+dummy_model <- dummyVars(~ ., data = titanic[, c(-1, -2)])
 
-dummy_vars <- dummyVars(~ ., data = titanic[, c(-1, -2)])
-
-# - Train on Training set and predict on Training Set
-train_dummy <- predict(dummy_vars, titanic[, c(-1, -2)])
+# - Transform Training Set into a Dummy set based on the Dummy Model
+train_dummy <- predict(dummy_model, titanic[, c(-1, -2)])
 View(train_dummy) # Transformed into Dummy still with Missing Data
 
-# Now impute on Training Set
-pre_process <- preProcess(train_dummy, method = "bagImpute")
-imputed_data <- predict(pre_process, train_dummy)
-View(imputed_data) # Returns a Matrix
+# Create a Model to Impute based on the Transformed Train Dummy Set
+impute_model <- preProcess(train_dummy, method = "bagImpute")
 
-titanic$Age <- imputed_data[, 6]
+# Now impute on Training Set using the Impute Model
+imputed_train <- predict(impute_model, train_dummy)
+View(imputed_train) # Returns a Matrix
+
+# Asign the Imputed Age to the Training Set
+titanic$Age <- imputed_train[, 6]
 View(titanic)
 
-## Now apply the Model to the Test Set
+## Now apply the Impute Model to the Test Set
+# - Transformed into Dummy using the Dummy Model created with the Training Set
+test_dummy <- predict(dummy_model, titanic_test_final[, c(-1, -2)])
+View(test_dummy) 
 
-test_dummy <- predict(dummy_vars, titanic_test_final[, c(-1, -2)])
-View(test_dummy) # Transformed into Dummy still with Missing Data
+# Now impute on Test Dummy Set using the Impute Model created with Training Set
+imputed_test <- predict(impute_model, test_dummy)
+View(imputed_test) # Returns a Matrix
 
-# Now impute on Test Set
-pre_process <- preProcess(test_dummy, method = "bagImpute")
-imputed_data <- predict(pre_process, test_dummy)
-View(imputed_data) # Returns a Matrix
-
-titanic_test_final$Age <- imputed_data[, 6]
+# Asign the Imputed Age to the Test Set
+titanic_test_final$Age <- imputed_test[, 6]
 View(titanic_test_final)
 
 
@@ -222,35 +235,39 @@ titanic_train %>%
 
 ## Desicion Tree Model to Predict Survival based on Gender, Pclass, Age and FamilySize
 # - Using "rpart"
-# - 81.65% Accuracy on Training Set
-# - 84.18% Accuracy on Validation Set (Might be too high)
-# - 82.15% Accuracy on the Whole Titanic Set (Better than based only on Gender)
+# - 85.31% Accuracy on Validation Set (Might be too high)
 
-modelFit <- train(Survived ~ ., method = "rpart", data = titanic_train[, c(-1)])
+## Select the Training Variables
+# - Using all Variables except for Passenger ID
+
+training <- titanic_train[, c(-1)]
+
+modelFit <- train(Survived ~ ., method = "rpart", data = training)
 modelFit$finalModel
-
-# Predict Using the Model
-pred <- predict(modelFit, newdata = titanic_train)
-pred
-
-# Look at Confusion Matrix
-confusionMatrix(data = pred, reference = titanic_train$Survived) 
-
 
 ## Apply to the Validation set
 pred <- predict(modelFit, newdata = titanic_test)
-pred
 
 # Look at Confusion Matrix
 confusionMatrix(data = pred, reference = titanic_test$Survived) 
 
 
-## Apply to the Whole Training set
-pred <- predict(modelFit, newdata = titanic)
-pred
+###########################
+
+## Select the Training Variables
+# - Using all Variables except for Passenger ID and Embarked
+
+training <- titanic_train %>%
+  select(Survived, Pclass, Sex, Age, Title, FamilySize, Fare)
+
+modelFit <- train(Survived ~ ., method = "rpart", data = training)
+modelFit$finalModel
+
+## Apply to the Validation set
+pred <- predict(modelFit, newdata = titanic_test)
 
 # Look at Confusion Matrix
-confusionMatrix(data = pred, reference = titanic$Survived) 
+confusionMatrix(data = pred, reference = titanic_test$Survived) 
 
 ############################## 
 # Predict on the Holdout Test
