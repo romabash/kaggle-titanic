@@ -1,5 +1,5 @@
 ## Imputing Missing Age with Caret package using knnImpute
-## Build a Desicion Tree Model using "rpart"
+## Build Random Forests Model
 
 # Load packages
 library(readr)
@@ -229,41 +229,24 @@ titanic_train %>%
 
 
 ############################## 
-# Build a Model
+# Build a Random Forests Model
 ##############################
 
-
-## Desicion Tree Model to Predict Survival based on Gender, Pclass, Age and FamilySize
-# - Using "rpart"
-# - 85.31% Accuracy on Validation Set (Might be too high)
-
-## Select the Training Variables
-# - Using all Variables except for Passenger ID
-
-training <- titanic_train[, c(-1)]
-
-modelFit <- train(Survived ~ ., method = "rpart", data = training)
-modelFit$finalModel
-
-## Apply to the Validation set
-pred <- predict(modelFit, newdata = titanic_test)
-
-# Look at Confusion Matrix
-confusionMatrix(data = pred, reference = titanic_test$Survived) 
-
-
-###########################
+# - Using Random Forests
+# - 85.88% Accuracy on Validation Set 
+# - Smallest OOB error rate with Survived, Pclass, Sex, Title, FamilySize, Fare
 
 ## Select the Training Variables
 # - Looking at Variable with no Variability
 # - All FALSE: No Zero Covariates
+
 nearZeroVar(titanic_train, saveMetrics = TRUE)
 
 # - Using all Variables except for Passenger ID and Embarked
 training <- titanic_train %>%
-  select(Survived, Pclass, Sex, Age, Title, FamilySize, Fare)
+  select(Survived, Pclass, Sex, Title, FamilySize, Fare)
 
-modelFit <- train(Survived ~ ., method = "rpart", data = training)
+modelFit <- train(Survived ~ ., method = "rf", data = training)
 modelFit$finalModel
 
 ## Apply to the Validation set
@@ -290,4 +273,48 @@ result_final <- titanic_test_final %>%
 
 ## Write to csv to Submit on Kaggle
 
-write_csv(result_final, "../Data/output/3.3_Decision-Tree-2.csv")
+write_csv(result_final, "../Data/output/3.4_Random-Forests.csv")
+
+
+
+
+############################## 
+# Build a Boosting Model
+##############################
+
+# - Using gbm
+# - 86.44% Accuracy on Validation Set 
+# - Using Survived, Pclass, Sex, Age, Title, FamilySize, Fare
+
+training <- titanic_train %>%
+  select(Survived, Pclass, Sex, Age, Title, FamilySize, Fare)
+
+modelFit <- train(Survived ~ ., method = "gbm", data = training)
+modelFit$finalModel
+
+## Apply to the Validation set
+pred <- predict(modelFit, newdata = titanic_test)
+
+# Look at Confusion Matrix
+confusionMatrix(data = pred, reference = titanic_test$Survived) 
+
+############################## 
+# Predict on the Holdout Test
+##############################
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+pred <- predict(modelFit, newdata = titanic_test_final)
+pred
+
+result_final <- titanic_test_final %>%
+  select(PassengerId) %>%
+  mutate(Survived = pred)
+
+## Write to csv to Submit on Kaggle
+
+write_csv(result_final, "../Data/output/3.4_gbm.csv")
+
