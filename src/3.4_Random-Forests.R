@@ -318,3 +318,8 @@ result_final <- titanic_test_final %>%
 
 write_csv(result_final, "../Data/output/3.4_gbm.csv")
 
+############################## 
+# gbm scored 0.77511 on Kaggle
+##############################
+
+
