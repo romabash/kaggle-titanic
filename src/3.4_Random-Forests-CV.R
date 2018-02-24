@@ -168,31 +168,31 @@ dummy_model <- dummyVars(~ ., data = titanic[, c(-1, -2)])
 
 # - Transform Training Set into a Dummy set based on the Dummy Model
 train_dummy <- predict(dummy_model, titanic[, c(-1, -2)])
-View(train_dummy) # Transformed into Dummy still with Missing Data
+head(train_dummy) # Transformed into Dummy still with Missing Data
 
 # Create a Model to Impute based on the Transformed Train Dummy Set
 impute_model <- preProcess(train_dummy, method = "bagImpute")
 
 # Now impute on Training Set using the Impute Model
 imputed_train <- predict(impute_model, train_dummy)
-View(imputed_train) # Returns a Matrix
+head(imputed_train) # Returns a Matrix
 
 # Asign the Imputed Age to the Training Set
 titanic$Age <- imputed_train[, 6]
-View(titanic)
+head(titanic)
 
 ## Now apply the Impute Model to the Test Set
 # - Transformed into Dummy using the Dummy Model created with the Training Set
 test_dummy <- predict(dummy_model, titanic_test_final[, c(-1, -2)])
-View(test_dummy) 
+head(test_dummy) 
 
 # Now impute on Test Dummy Set using the Impute Model created with Training Set
 imputed_test <- predict(impute_model, test_dummy)
-View(imputed_test) # Returns a Matrix
+head(imputed_test) # Returns a Matrix
 
 # Asign the Imputed Age to the Test Set
 titanic_test_final$Age <- imputed_test[, 6]
-View(titanic_test_final)
+head(titanic_test_final)
 
 
 ############################## 
@@ -247,6 +247,7 @@ titanic_train %>%
 
 nearZeroVar(titanic_train, saveMetrics = TRUE)
 
+# Using the full Training set with CV
 # - Using all Variables except for Passenger ID and Embarked
 training <- titanic_train %>%
   select(Survived, Pclass, Sex, Age, Title, FamilySize, Fare)
@@ -260,7 +261,7 @@ registerDoParallel(cluster)
 fitControl <- trainControl(method = "repeatedcv", number = 3, repeats = 10, allowParallel = TRUE)
 
 # Build a Model
-set.seed(021818)
+set.seed(022318)
 modelFit <- train(Survived ~ ., method = "rf", data = training, trControl = fitControl)
 
 # Shut down the cluster
@@ -296,67 +297,10 @@ result_final <- titanic_test_final %>%
 
 ## Write to csv to Submit on Kaggle
 
-write_csv(result_final, "../Data/output/3.4.2_Random-Forests-CV.csv")
+write_csv(result_final, "../Data/output/3.4.5_RF-CV-k3-n10.csv")
 
 
 
-############################## 
-# Build a Boosting Model
-##############################
-
-# - Using gbm
-# - 85.88% Accuracy on Validation Set 
-# - Using Survived, Pclass, Sex, Age, Title, FamilySize, Fare
-
-training <- titanic_train %>%
-  select(Survived, Pclass, Sex, Age, Title, FamilySize, Fare)
-
-## Pararell Programming
-# - Leave 1 core out
-cluster <- makeCluster(detectCores() - 1)
-registerDoParallel(cluster)
-
-# Conigure trainControl
-fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 10, allowParallel = TRUE)
-
-# Build a Model
-set.seed(021818)
-modelFit <- train(Survived ~ ., method = "gbm", data = training, trControl = fitControl, verbose = FALSE)
-
-# Shut down the cluster
-stopCluster(cluster)
-registerDoSEQ()
-
-modelFit
-modelFit$finalModel
-
-## Apply to the Validation set
-pred <- predict(modelFit, newdata = titanic_test)
-
-# Look at Confusion Matrix
-confusionMatrix(data = pred, reference = titanic_test$Survived) 
-
-
-############################## 
-# Predict on the Holdout Test
-##############################
-
-
-## Apply to the Holdout Test Set
-# - At the end, Select only the PassengerId and Prediction Column
-# - Rename Prediction to Survived
-# - Save as csv file to submit
-
-pred <- predict(modelFit, newdata = titanic_test_final)
-pred
-
-result_final <- titanic_test_final %>%
-  select(PassengerId) %>%
-  mutate(Survived = pred)
-
-## Write to csv to Submit on Kaggle
-
-write_csv(result_final, "../Data/output/3.4.1_gbm-CV.csv")
 
 
 
