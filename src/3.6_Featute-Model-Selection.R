@@ -812,3 +812,151 @@ write_csv(result_final, "../Data/output/3.6.4_rf-noCV.csv")
 # Kaggle Score 0.74641: Same as beore Much Lower than rpart
 
 
+####################################
+# Build a Boosting Model gbm Function
+####################################
+
+
+## Create a function for Pararell Programming 
+# - Leave 1 core out
+gbmModel <- function(x, y, method, train_control, seed){
+  
+  cluster <- makeCluster(detectCores() - 1)
+  registerDoParallel(cluster)
+  
+  ## Build a Model
+  set.seed(seed)
+  modelFit <- train(x = x, 
+                    y = y, 
+                    method = method, 
+                    tuneLength = 3,
+                    trControl = train_control)
+  
+  ## Shut down the cluster
+  stopCluster(cluster)
+  registerDoSEQ()
+  
+  ## Return Model
+  return (modelFit)
+}
+
+
+
+############################## 
+# gbm Model 1
+##############################
+
+
+## gbm Model 1
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
+label <- as.factor(titanic_train$Survived)
+
+training <- titanic_train %>%
+  select(Pclass, Gender, Ticket_Count, Fare_Ave) %>%
+  as.data.frame()
+
+## Conigure trainControl
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 3, 
+                           repeats = 10, 
+                           allowParallel = TRUE)
+
+modelgbm1 <- gbmModel(x = training, y = label, 
+                   method = "rf", 
+                   train_control = fitControl, 
+                   seed = 32323)
+
+## Final Model: 15.97% OOB
+modelgbm1
+modelgbm1$finalModel
+
+## Apply to the Validation set
+# - Look at Confusion Matrix: 83.62
+pred <- predict(modelgbm1, newdata = titanic_test)
+confusionMatrix(data = pred, reference = titanic_test$Survived)
+
+
+############################## 
+# Predict on the Holdout Test
+##############################
+
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+pred <- predict(modelgbm1, newdata = titanic_test_final)
+pred
+
+result_final <- titanic_test_final %>%
+  select(PassengerId) %>%
+  mutate(Survived = pred)
+
+## Write to csv to Submit on Kaggle
+# - .77511 on Kaggle
+write_csv(result_final, "../Data/output/3.6.5_gbm-k3-n10.csv")
+
+# Kaggle Score 0.74641: Same as RF, Much Lower than rpart
+
+
+############################## 
+# gbm Model 2
+##############################
+
+
+## gbm Model 2
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
+label <- as.factor(titanic_train$Survived)
+
+training <- titanic_train %>%
+  select(Pclass, Sex, Age, Title, Ticket_Count, Fare_Ave) %>%
+  as.data.frame()
+
+## Conigure trainControl
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 3, 
+                           repeats = 10, 
+                           allowParallel = TRUE)
+
+modelgbm2 <- gbmModel(x = training, y = label, 
+                      method = "rf", 
+                      train_control = fitControl, 
+                      seed = 32323)
+
+## Final Model: 15.83% OOB
+modelgbm2
+modelgbm2$finalModel
+
+## Apply to the Validation set
+# - Look at Confusion Matrix: 83.05
+pred <- predict(modelgbm2, newdata = titanic_test)
+confusionMatrix(data = pred, reference = titanic_test$Survived)
+
+
+############################## 
+# Predict on the Holdout Test
+##############################
+
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+pred <- predict(modelgbm2, newdata = titanic_test_final)
+pred
+
+result_final <- titanic_test_final %>%
+  select(PassengerId) %>%
+  mutate(Survived = pred)
+
+## Write to csv to Submit on Kaggle
+# - .77511 on Kaggle
+write_csv(result_final, "../Data/output/3.6.6_gbm-k3-n10.csv")
+
+# Kaggle Score 0.77990: Better than before, Much Lower than rpart
+
+
