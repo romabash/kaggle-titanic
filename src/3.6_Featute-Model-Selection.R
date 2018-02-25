@@ -707,7 +707,7 @@ write_csv(result_final, "../Data/output/3.6.2_rf-k3-n10.csv")
 ##############################
 
 
-## RF Model 1
+## RF Model 2
 # - Selecting a Label and a Training set instead of a formula
 # - Set Training set as a datarame insead of a tibble
 label <- as.factor(titanic_train$Survived)
@@ -757,6 +757,57 @@ result_final <- titanic_test_final %>%
 ## Write to csv to Submit on Kaggle
 # - .77511 on Kaggle
 write_csv(result_final, "../Data/output/3.6.3_rf-k3-n10.csv")
+
+# Kaggle Score 0.74641: Same as beore Much Lower than rpart
+
+
+
+############################## 
+# RF Model 3: RF without CV
+##############################
+
+
+## RF Model 3
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
+label <- as.factor(titanic_train$Survived)
+
+training <- titanic_train %>%
+  select(Pclass, Age, Title, Ticket_Count, Fare_Ave) %>%
+  as.data.frame()
+
+modelRF3 <- train(x = training, y = label, method = "rf")
+
+## Final Model: 15.83% OOB
+modelRF3
+modelRF3$finalModel
+
+## Apply to the Validation set
+# - Look at Confusion Matrix: 83.62
+pred <- predict(modelRF3, newdata = titanic_test)
+confusionMatrix(data = pred, reference = titanic_test$Survived)
+
+
+############################## 
+# Predict on the Holdout Test
+##############################
+
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+pred <- predict(modelRF, newdata = titanic_test_final)
+pred
+
+result_final <- titanic_test_final %>%
+  select(PassengerId) %>%
+  mutate(Survived = pred)
+
+## Write to csv to Submit on Kaggle
+# - .77511 on Kaggle
+write_csv(result_final, "../Data/output/3.6.4_rf-noCV.csv")
 
 # Kaggle Score 0.74641: Same as beore Much Lower than rpart
 
