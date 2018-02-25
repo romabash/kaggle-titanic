@@ -408,7 +408,7 @@ head(titanic_train)
 
 ## Create a function for Pararell Programming 
 # - Leave 1 core out
-pModel <- function(x, y, method, train_control, seed){
+rpartModel <- function(x, y, method, train_control, seed){
   
   cluster <- makeCluster(detectCores() - 1)
   registerDoParallel(cluster)
@@ -432,6 +432,7 @@ pModel <- function(x, y, method, train_control, seed){
 
 ############################## 
 # Using Decision Tree to choose best Features
+# Model 1
 ##############################
 
 
@@ -441,26 +442,35 @@ pModel <- function(x, y, method, train_control, seed){
 nearZeroVar(titanic_train, saveMetrics = TRUE)
 
 ## rpart Model 1
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
 label <- as.factor(titanic_train$Survived)
   
 training <- titanic_train %>%
-  select(Pclass, Sex, Age, Title, Gender, FamilySize, Ticket_Count, Fare_Ave, Embarked)
+  select(Pclass, Sex, Age, Title, Gender, FamilySize, Ticket_Count, Fare_Ave, Embarked) %>%
+  as.data.frame()
 
 ## Conigure trainControl
-fitControl <- trainControl(method = "repeatedcv", number = 3, repeats = 10, allowParallel = TRUE)
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 3, 
+                           repeats = 10, 
+                           allowParallel = TRUE)
 
-model <- pModel(x = training, y = label, method = "rpart", train_control = fitControl, seed = 32323)
+model1 <- rpartModel(x = training, y = label, 
+                     method = "rpart", 
+                     train_control = fitControl, 
+                     seed = 32323)
 
 ## Final Model
-model
-model$finalModel
+model1
+model1$finalModel
 
-rpart.plot(model$finalModel, type = 0, extra = 1)
-prp(model$finalModel, type = 0, extra = 1, under = TRUE)
+rpart.plot(model1$finalModel, type = 0, extra = 4)
+prp(model1$finalModel, type = 0, extra = 1, under = TRUE)
 
 ## Apply to the Validation set
 # - Look at Confusion Matrix: 83.62
-pred <- predict(model, newdata = titanic_test)
+pred <- predict(model1, newdata = titanic_test)
 confusionMatrix(data = pred, reference = titanic_test$Survived) 
 
 
@@ -470,27 +480,36 @@ confusionMatrix(data = pred, reference = titanic_test$Survived)
 
 
 ## rpart Model 2
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
 label <- as.factor(titanic_train$Survived)
 
 training <- titanic_train %>%
-  select(Pclass, Age, Title, Ticket_Count, Fare_Ave)
+  select(Pclass, Age, Title, Gender, FamilySize, Ticket_Count, Fare_Ave) %>%
+  as.data.frame()
 
 ## Conigure trainControl
-fitControl <- trainControl(method = "repeatedcv", number = 3, repeats = 10, allowParallel = TRUE)
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 3, 
+                           repeats = 10, 
+                           allowParallel = TRUE)
 
-model <- pModel(x = training, y = label, method = "rpart", train_control = fitControl, seed = 32323)
+model2 <- rpartModel(x = training, y = label, 
+                     method = "rpart", 
+                     train_control = fitControl, 
+                     seed = 32323)
 
 ## Final Model
-model
-model$finalModel
+model2
+model2$finalModel
 
-rpart.plot(model$finalModel, type = 0, extra = 1)
-prp(model$finalModel, type = 0, extra = 1, under = TRUE)
+rpart.plot(model2$finalModel, type = 0, extra = 4)
+prp(model2$finalModel, type = 0, extra = 1, under = TRUE)
 
 ## Apply to the Validation set
 # - Look at Confusion Matrix: 83.62
-pred <- predict(model, newdata = titanic_test)
-confusionMatrix(data = pred, reference = titanic_test$Survived) 
+pred <- predict(model2, newdata = titanic_test)
+confusionMatrix(data = pred, reference = titanic_test$Survived)
 
 
 ############################## 
@@ -499,56 +518,100 @@ confusionMatrix(data = pred, reference = titanic_test$Survived)
 
 
 ## rpart Model 3
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
 label <- as.factor(titanic_train$Survived)
 
 training <- titanic_train %>%
-  select(Pclass, Title, Ticket_Count, Fare_Ave)
+  select(Pclass, Age, Title, FamilySize, Ticket_Count, Fare_Ave) %>%
+  as.data.frame()
 
 ## Conigure trainControl
-fitControl <- trainControl(method = "repeatedcv", number = 3, repeats = 10, allowParallel = TRUE)
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 3, 
+                           repeats = 10, 
+                           allowParallel = TRUE)
 
-model <- pModel(x = training, y = label, method = "rpart", train_control = fitControl, seed = 32323)
+model3 <- rpartModel(x = training, y = label, 
+                     method = "rpart", 
+                     train_control = fitControl, 
+                     seed = 32323)
 
 ## Final Model
-model
-model$finalModel
+model3
+model3$finalModel
 
-rpart.plot(model$finalModel, type = 0, extra = 1)
-prp(model$finalModel, type = 0, extra = 1, under = TRUE)
+rpart.plot(model3$finalModel, type = 0, extra = 4)
+prp(model3$finalModel, type = 0, extra = 1, under = TRUE)
 
 ## Apply to the Validation set
 # - Look at Confusion Matrix: 83.62
-pred <- predict(model, newdata = titanic_test)
+pred <- predict(model3, newdata = titanic_test)
 confusionMatrix(data = pred, reference = titanic_test$Survived) 
 
 
 ############################## 
-# Model 3
+# Model 4
 ##############################
 
 
-## rpart Model 3
+## rpart Model 4
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
 label <- as.factor(titanic_train$Survived)
 
 training <- titanic_train %>%
-  select(Pclass, Title, FamilySize, Fare_Ave)
+  select(Pclass, Gender, Ticket_Count, Fare_Ave) %>%
+  as.data.frame()
 
 ## Conigure trainControl
-fitControl <- trainControl(method = "repeatedcv", number = 3, repeats = 10, allowParallel = TRUE)
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 3, 
+                           repeats = 10, 
+                           allowParallel = TRUE)
 
-model <- pModel(x = training, y = label, method = "rpart", train_control = fitControl, seed = 32323)
+model4 <- rpartModel(x = training, y = label, 
+                     method = "rpart", 
+                     train_control = fitControl, 
+                     seed = 32323)
 
 ## Final Model
-model
-model$finalModel
+model4
+model4$finalModel
 
-rpart.plot(model$finalModel, type = 0, extra = 1)
-prp(model$finalModel, type = 0, extra = 1, under = TRUE)
+rpart.plot(model4$finalModel, type = 0, extra = 4)
+prp(model4$finalModel, type = 0, extra = 1, under = TRUE)
 
 ## Apply to the Validation set
-# - Look at Confusion Matrix: 83.62
-pred <- predict(model, newdata = titanic_test)
-confusionMatrix(data = pred, reference = titanic_test$Survived) 
+# - Look at Confusion Matrix: 85.88
+# - Better Accuracy with these Features
+pred <- predict(model4, newdata = titanic_test)
+confusionMatrix(data = pred, reference = titanic_test$Survived)
+
+
+############################## 
+# Predict on the Holdout Test
+##############################
+
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+pred <- predict(model4, newdata = titanic_test_final)
+pred
+
+result_final <- titanic_test_final %>%
+  select(PassengerId) %>%
+  mutate(Survived = pred)
+
+## Write to csv to Submit on Kaggle
+# - .77511 on Kaggle
+write_csv(result_final, "../Data/output/3.6.1_rpart-k3-n10.csv")
+
+# Kaggle Score 0.79904: Higher than some Random Forests submitions
+
 
 
 
