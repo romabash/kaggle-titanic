@@ -613,10 +613,151 @@ write_csv(result_final, "../Data/output/3.6.1_rpart-k3-n10.csv")
 # Kaggle Score 0.79904: Higher than some Random Forests submitions
 
 
+####################################
+# Build a Random Forests Model Function
+####################################
+
+
+## Create a function for Pararell Programming 
+# - Leave 1 core out
+rfModel <- function(x, y, method, train_control, seed){
+  
+  cluster <- makeCluster(detectCores() - 1)
+  registerDoParallel(cluster)
+  
+  ## Build a Model
+  set.seed(seed)
+  modelFit <- train(x = x, 
+                    y = y, 
+                    method = method, 
+                    tuneLength = 3,
+                    trControl = train_control)
+  
+  ## Shut down the cluster
+  stopCluster(cluster)
+  registerDoSEQ()
+  
+  ## Return Model
+  return (modelFit)
+}
 
 
 
+############################## 
+# RF Model 1
+##############################
 
 
+## RF Model 1
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
+label <- as.factor(titanic_train$Survived)
+
+training <- titanic_train %>%
+  select(Pclass, Gender, Ticket_Count, Fare_Ave) %>%
+  as.data.frame()
+
+## Conigure trainControl
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 3, 
+                           repeats = 10, 
+                           allowParallel = TRUE)
+
+modelRF <- rfModel(x = training, y = label, 
+                      method = "rf", 
+                      train_control = fitControl, 
+                      seed = 32323)
+
+## Final Model: 15.97% OOB
+modelRF
+modelRF$finalModel
+
+## Apply to the Validation set
+# - Look at Confusion Matrix: 83.63
+pred <- predict(modelRF, newdata = titanic_test)
+confusionMatrix(data = pred, reference = titanic_test$Survived)
+
+
+############################## 
+# Predict on the Holdout Test
+##############################
+
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+pred <- predict(modelRF, newdata = titanic_test_final)
+pred
+
+result_final <- titanic_test_final %>%
+  select(PassengerId) %>%
+  mutate(Survived = pred)
+
+## Write to csv to Submit on Kaggle
+# - .77511 on Kaggle
+write_csv(result_final, "../Data/output/3.6.2_rf-k3-n10.csv")
+
+# Kaggle Score 0.74641: Much Lower than rpart
+
+
+############################## 
+# RF Model 2: Title and Age instead of Gender
+##############################
+
+
+## RF Model 1
+# - Selecting a Label and a Training set instead of a formula
+# - Set Training set as a datarame insead of a tibble
+label <- as.factor(titanic_train$Survived)
+
+training <- titanic_train %>%
+  select(Pclass, Age, Title, Ticket_Count, Fare_Ave) %>%
+  as.data.frame()
+
+## Conigure trainControl
+fitControl <- trainControl(method = "repeatedcv", 
+                           number = 3, 
+                           repeats = 10, 
+                           allowParallel = TRUE)
+
+modelRF2 <- rfModel(x = training, y = label, 
+                   method = "rf", 
+                   train_control = fitControl, 
+                   seed = 32323)
+
+## Final Model: 14.99% OOB
+modelRF2
+modelRF2$finalModel
+
+## Apply to the Validation set
+# - Look at Confusion Matrix: 83.62
+pred <- predict(modelRF2, newdata = titanic_test)
+confusionMatrix(data = pred, reference = titanic_test$Survived)
+
+
+############################## 
+# Predict on the Holdout Test
+##############################
+
+
+## Apply to the Holdout Test Set
+# - At the end, Select only the PassengerId and Prediction Column
+# - Rename Prediction to Survived
+# - Save as csv file to submit
+
+pred <- predict(modelRF, newdata = titanic_test_final)
+pred
+
+result_final <- titanic_test_final %>%
+  select(PassengerId) %>%
+  mutate(Survived = pred)
+
+## Write to csv to Submit on Kaggle
+# - .77511 on Kaggle
+write_csv(result_final, "../Data/output/3.6.3_rf-k3-n10.csv")
+
+# Kaggle Score 0.74641: Same as beore Much Lower than rpart
 
 
